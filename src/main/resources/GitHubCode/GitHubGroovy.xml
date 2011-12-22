@@ -210,11 +210,6 @@ public class GitHubGroovy {
         return c.trim().replaceAll("[\r]","");
     }
 
-    public commitFile(pagedoc, message) {
-        def c = getXML(pagedoc);
-        return setFileContent(pagedoc.getSpace(), pagedoc.getName(), pagedoc.getLanguage(), c, message)
-    }
-
     public commitFiles(pagelist, message) {
         def newSpaces = new ArrayList();
         def newPages = new ArrayList();
@@ -278,15 +273,10 @@ public class GitHubGroovy {
         def ref = dservice.getReference(repository, "refs/heads/master");
         def sha = ref.getObject().getSha()
         def tree = dservice.getTree(repository, sha, true);
+        ArrayList&lt;TreeEntry&gt; treeEntries = new ArrayList&lt;TreeEntry&gt;();
 
         try {
          for (space in pagesBySpace.keySet()) {
-            if (newSpaces.contains(space)) {      
-             // need to create the space
-             // editor.addDir(space, null, -1);
-            } else {             
-            }
-
             // loop on each page
             for (pagedoc in pagesBySpace.get(space)) {  
               pagename2 = pagedoc.getFullName();
@@ -316,41 +306,12 @@ public class GitHubGroovy {
               blobTreeEntry.setType("blob");
               blobTreeEntry.setMode("100644");
               blobTreeEntry.setSha(blobSha);
-
-              ArrayList&lt;TreeEntry&gt; treeEntries = new ArrayList&lt;TreeEntry&gt;();
               treeEntries.add(blobTreeEntry);
-
-              Tree currentTree = dservice.getCommit(repository, ref.getObject().getSha()).getTree();
-              Tree blobTree = dservice.createTree(repository, treeEntries, currentTree.getSha());      
-              debug("Create tree: " + blobTree + " in path " + reppath + filePath);
-
-              CommitUser commitUser = new CommitUser();
-              commitUser.setName("Ludovic Dubost");
-              commitUser.setEmail("ludovic@xwiki.com");
-              commitUser.setDate(new Date());
-              
-              Commit commit = new Commit();
-              // commit.setAuthor(commitUser);
-              // commit.setCommitter(commitUser);
-              commit.setMessage("test commit");
-              commit.setTree(blobTree);
-              commit.setParents(Collections.singletonList(new Commit().setSha(ref.getObject().getSha())));
-
-              def newCommit = dservice.createCommit(repository, commit);
-              debug("Created commit: " + newCommit);
-
-              TypedResource object = new TypedResource();
-              object.setType("commit").setSha(newCommit.getSha());
-              ref.setObject(object);
-              dservice.editReference(repository, ref, false);
 
               if (newPages.contains(filePath)) {
                 // adding the page
               } else {
                 def oldData = currentPageData.get(filePath);
-
-                // updating page
-
                 // updating status to check for changes
                 committedPages.add(getStatusPath(pagedoc));
                 def pageStatus = status.get(getStatusPath(pagedoc));
@@ -367,11 +328,27 @@ public class GitHubGroovy {
             debug("error preparing commit on page ${pagename2}: " + e.getMessage());
             return null;
 
-        } finally {
-           
+        } finally {          
         }
 
         // now real commit
+        Tree currentTree = dservice.getCommit(repository, ref.getObject().getSha()).getTree();
+        Tree blobTree = dservice.createTree(repository, treeEntries, currentTree.getSha());      
+        debug("Create tree: " + blobTree);
+
+        Commit commit = new Commit();
+        commit.setMessage(message);
+        commit.setTree(blobTree);
+        commit.setParents(Collections.singletonList(new Commit().setSha(ref.getObject().getSha())));
+
+        def newCommit = dservice.createCommit(repository, commit);
+        debug("Created commit: " + newCommit);
+
+        TypedResource object = new TypedResource();
+        object.setType("commit").setSha(newCommit.getSha());
+        ref.setObject(object);
+        dservice.editReference(repository, ref, false);
+
         // get the commit revision number and store it
          // we need to save the status
         def rev = ""
@@ -381,66 +358,6 @@ public class GitHubGroovy {
          saveStatus();
          return commitInfo;
     }
-
-    public setFileContent(String space, String page, String language, String xml, String message) {
-        setFileContent(space, page, language, xml, message, null, true);
-    }
-
-    public setFileContent(String space, String page, String language, String xml, String message, boolean createDir) {
-        // get page
-        def filePath = space + "/" + page;
-        if (language!=null&amp;&amp;language!="")
-          filePath += "." + language;
-        filePath += ".xml"
-
-
-        def c = getFileContentAsString(space, page, language);
-        def changed = false;
-        if (c==null || !c.equals(xml))
-            changed = true;
-
-        if (changed) {
-          def editor = repository.getCommitEditor(message, null);
-          def commitInfo = null;
-
-          try {
-           if (c==null) {
-             // page does not exist we need to add it
-             debug("Ready to add file ${filePath} with createDir ${createDir}")
-             addFile(editor, space, filePath, xml.getBytes(), createDir, true, true)
-           } else {
-             // content is different we can commit
-             // page does not exist we need to add it
-             debug("Ready to update file ${filePath}")
-             modifyFile(editor, space, filePath, c.getBytes(), xml.getBytes())
-           }
-          } catch (Throwable e) {
-             e.printStackTrace();
-             debug("error preparing commit: " + e.getMessage());
-             return null;
-          } finally {
-           /*
-            * This is the final point in all editor handling. Only now all that new
-            * information previously described with the editor's methods is sent to
-            * the server for committing. As a result the server sends the new
-            * commit information.
-            */
-            try {
-              commitInfo = editor.closeEdit();  
-            } catch (Throwable e) {
-             e.printStackTrace();
-             debug("error calling closeEdit: " + e.getMessage());
-             return null;
-            }
-          }
-          return commitInfo;
-        } else {
-          // content is the same. do not commit
-          debug("content is the same. do not commit");
-          return null;
-        }
-    }
-
 
     public getChangedPages(String spaces) {
         return getChangedPages(spaces, "");
@@ -471,7 +388,9 @@ public class GitHubGroovy {
 
             // debug("Checking page ${page} version ${pagedoc.getVersion()} pageStatus ${pageStatus}")
 
-            if (pageStatus.xwikihash=="") {
+            if (entry==null &amp;&amp; !pagedoc.isNew()) {
+                pageStatus.status = "A";
+            } else if (pageStatus.xwikihash=="") {
                def githubsha = (entry==null) ? "" : entry.githubsha;
                if (githubsha=="")
                 pageStatus.status = "A";
@@ -539,14 +458,24 @@ public class GitHubGroovy {
            }
         }
  
+        debug("ChangedMap: " + changedMap);
+
         if (spaceList!=null) {
-         for (entry in githubEntries.keySet()) {
-             def i1 = entry.indexOf("/");
-             def i2 = entry.indexOf(".xml");
-             def spaceName = (i1==-1) ? entry : entry.substring(0, i1);
-             def pageName = (i2==-1) ? entry : entry.substring(i1+1, i2);
-             if (spaceList.contains(spaceName)&amp;&amp;!samePages.contains(entry)&amp;&amp;!changedMap.keySet().contains(spaceName + "." + pageName)) {
-               changedMap.put(spaceName + "." + pageName, [ "status" : "N", "xwikiversion" : "", "githubversion" : githubEntries.get(entry).githubversion ])
+         for (filePath in githubEntries.keySet()) {
+             def entry = githubEntries.get(filePath);
+             def i1 = filePath.indexOf("/");
+             def i2 = filePath.indexOf(".xml");
+             def spaceName = (i1==-1) ? filePath : filePath.substring(0, i1);
+             def page = (i2==-1) ? filePath : filePath.substring(i1+1, i2);
+             def language = "";
+             def pageName = page;
+             if (page.contains(".")) {
+               def i3 = page.indexOf(".");
+               language = page.substring(i3+1);
+               pageName = page.substring(0, i3);
+             }
+             if (spaceList.contains(spaceName)&amp;&amp;!samePages.contains(filePath)&amp;&amp;!changedMap.keySet().contains(spaceName + "." + page)) {
+               changedMap.put(spaceName + "." + pageName, [ "fullname" : "${spaceName}.${pageName}", "language" : language, "status" : "N", "xwikiversion" : "", "githubsha" : entry.githubsha ])
              }
          }
         }
@@ -559,7 +488,12 @@ public class GitHubGroovy {
         def changedMap = new TreeMap();
         def githubEntries = getEntries();
 
-        for (page in pageList) {
+        for (pageobj in pageList) {
+           def page = pageobj.page;
+           def sha = pageobj.sha;
+
+           debug("Ready to update: ${page} ${sha}");
+
            // separate the language particle at the end of the page name from the page fullname. The pagename is of form &lt;docfullname&gt;.&lt;doclanguage&gt;
            def languageSeparator = page.lastIndexOf('.');
            if (languageSeparator &lt; 0) {
@@ -573,36 +507,23 @@ public class GitHubGroovy {
              pagedoc = pagedoc.getTranslatedDocument(lang);
            }
            def wikicontent = getXML(pagedoc);
-           def githubcontent = getFileContentAsString(pagedoc.getSpace(), pagedoc.getName(), pagedoc.getLanguage())
-           def githubversion = "";
-           if (!wikicontent.equals(githubcontent)) {
-            def filePath = getFilePath(pagedoc);
-            def pageStatus = getPageStatus(getStatusPath(pagedoc));
-            if (pageStatus==null) {
+
+           def filePath = getFilePath(pagedoc);
+           def entry = githubEntries.get(filePath);
+           def githubversion = (entry==null) ? "" : entry.githubversion;
+           def githubcontent = (entry==null) ? "" : entry.githubcontent;
+
+           debug("Ready to update: ${filePath}");
+
+           if (!wikicontent.equals(githubcontent) &amp;&amp; githubcontent!=null &amp;&amp; githubcontent!="") {
+              def pageStatus = getPageStatus(getStatusPath(pagedoc));
+              if (pageStatus==null) {
                pageStatus = [ "xwikiversion" : pagedoc.getVersion(), "xwikihash" : "", "githubversion" : "" ];
-            }
-            pageStatus.filePath = filePath;
-            pageStatus.page = pagefullname;
-            pageStatus.status = "";
+              }
+              pageStatus.filePath = filePath;
+              pageStatus.page = pagefullname;
+              pageStatus.status = "";
 
-            // debug("Checking page ${page} version ${pagedoc.getVersion()} pageStatus ${pageStatus}")
-            def needUpdate = false
-            def entry = githubEntries.get(filePath);
-            githubversion = (entry==null) ? "" : entry.githubversion;
-
-            if (pageStatus.xwikihash=="") {
-               if (githubversion!="")
-                needUpdate = true;
-            } else if (pagedoc.getVersion().equals(pageStatus.xwikiversion)) {
-                needUpdate = true;
-            } else {
-               if (githubversion!="")
-                needUpdate = true
-               else if(pageStatus.githubversion!=githubversion) 
-                needUpdate = true;
-            }
- 
-            if (needUpdate) {
               // updating XWiki document from GitHub
               changedMap.put(pagefullname, pageStatus);
               def archive = pagedoc.document.getDocumentArchive(context.getContext());
@@ -663,7 +584,6 @@ public class GitHubGroovy {
               pageStatus.xwikihash = "${newwikicontent.hashCode()}";  
               pageStatus.githubversion = githubversion;    
             }
-           }
         } 
         // saveStatus if changed
         saveStatus();
@@ -743,14 +663,18 @@ public class GitHubGroovy {
         def sha = dservice.getReference(repository, "refs/heads/master").getObject().getSha()
         for (treeEntry in dservice.getTree(repository, sha, true).tree) {
           def entryPath = treeEntry.getPath();
+          debug("Checking path: ${entryPath}");
           if (entryPath!=null &amp;&amp; entryPath.startsWith(reppath)) {
            def filePath = treeEntry.path.substring(reppath.length());
-           def blob = dservice.getBlob(repository, treeEntry.sha);
-           def githubcontent = new String(Base64.decodeBase64(blob.content.getBytes())).replaceAll("[\r]","").trim();
-           def githubhash = (githubcontent==null) ? "" : githubcontent.hashCode();
-           def githubversion = 0;
-           entries.put(filePath, [ "githubversion" : githubversion, "githubsha" : treeEntry.sha, "githubhash" : "${githubhash}", "githubcontent" : githubcontent ]);
-           debug("Adding: ${filePath}");
+           debug("Got filePath: ${filePath}");
+           if (filePath.contains("/")) {
+            def blob = dservice.getBlob(repository, treeEntry.sha);
+            def githubcontent = new String(Base64.decodeBase64(blob.content.getBytes())).replaceAll("[\r]","").trim();
+            def githubhash = (githubcontent==null) ? "" : githubcontent.hashCode();
+            def githubversion = 0;
+            entries.put(filePath, [ "githubversion" : githubversion, "githubsha" : treeEntry.sha, "githubhash" : "${githubhash}", "githubcontent" : githubcontent ]);
+            debug("Adding: ${filePath}");
+           }
           }
         }
         return entries;

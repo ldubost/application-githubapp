@@ -137,6 +137,7 @@ function tsuggest(field) {
  #set($status = $cmap.get($page))
  ## encode the language of the document after the document name, after a dot. Will be processed on commit
 &lt;li&gt;$status.status &lt;input type="checkbox" name="page" value="${status.fullname}.$!{status.language}" /&gt; ${page}
+&lt;input type="hidden" name="${status.fullname}.$!{status.language}_sha" value="${status.githubsha}" /&gt;
 #if($status.status!="N")
 [[$msg.get("github.configsheet.viewdiff")&gt;&gt;${doc.fullName}?action=compare&amp;page=${status.fullname}&amp;githublanguage=${status.language}&amp;spaces=$!{spaces}&amp;githubsha=${status.githubsha}||target=_blank]]
 #end
@@ -155,7 +156,7 @@ $githubgroovy.exportPages($doc.name, $pagelist)
 #elseif($request.update)
 #set($pagelist = $xwiki.arrayList)
 #foreach($page in $request.getParameterValues("page"))
-#set($ok = $pagelist.add($page))
+#set($ok = $pagelist.add({ "page" : $page, "sha" : $request.get("${page}_sha")}))
 #end
 #set($list = $githubgroovy.updatePages($pagelist))
 
