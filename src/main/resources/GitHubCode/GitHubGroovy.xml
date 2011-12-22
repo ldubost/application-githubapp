@@ -68,8 +68,6 @@ public class GitHubGroovy {
        this.prjname = configdoc.getValue("name");
        this.prjdesc = configdoc.getValue("description");
        this.prjversion = configdoc.getValue("version");
-       this.username = configdoc.getValue("username")
-       this.password = configdoc.getObject("GitHubCode.GitHubConfigClass").getProperty("password").property.value
        this.repuser = configdoc.getValue("repository_user");
        this.repname = configdoc.getValue("repository_name");
        this.reppath = configdoc.getValue("repository_path");
@@ -79,14 +77,25 @@ public class GitHubGroovy {
        this.defaultUser = configdoc.getValue("defaultuser");
        this.status = getStatus(configdoc.getValue("status"));
 
+       def authobj = configdoc.getObject("GitHubCode.GitHubAuthClass", "contextuser", context.user)
+       if (authobj) {
+         this.username = authobj.getProperty("username").value
+         this.password = authobj.getProperty("password").property.value
+         debug("Found user ${username}")
+       }
+
       //Basic authentication
       githubclient = new GitHubClient();
       githubclient.setCredentials(username, password);
        
       def rservice = new RepositoryService(githubclient);
-      repository = rservice.getRepository(repuser, repname)
+      try {
+       repository = rservice.getRepository(repuser, repname)
+      } catch (RequestException e) {
+       return "GitHub Connection Failed: " + e.getMessage();
+      }
  
-      debug("Date:" + this.defaultDate);
+      return "";
     }
 
     public getStatus(status) {
@@ -175,7 +184,6 @@ public class GitHubGroovy {
       samplePOM = samplePOM.replaceAll("PRJPNAME", prjname)
       samplePOM = samplePOM.replaceAll("PRJDESC", escapetool.xml(prjdesc))
       samplePOM = samplePOM.replaceAll("PRJVERSION", prjversion)
-      debug("POM: ${samplePOM}");
       return samplePOM;
    }
 

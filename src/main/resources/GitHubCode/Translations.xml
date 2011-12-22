@@ -48,6 +48,9 @@ github.configsheet.custom.spacelist=Space List (separated by commas)
 github.configsheet.custom.space=Space
 github.configsheet.customlist=Custom List of pages
 github.configsheet.pagesupdated=The following pages have been updated from GitHub
+GitHubCode.GitHubConfigClass_name=Project Name
+GitHubCode.GitHubConfigClass_description=Project Description
+GitHubCode.GitHubConfigClass_version=Project version
 GitHubCode.GitHubConfigClass_repository_user=GitHub Repository User
 GitHubCode.GitHubConfigClass_repository_user_tooltip=GitHub User where to commit the wiki pages
 GitHubCode.GitHubConfigClass_repository_name=GitHub Repository Name
@@ -66,6 +69,6 @@ GitHubCode.GitHubConfigClass_defaultdate=Default date
 GitHubCode.GitHubConfigClass_defaultdate_tooltip=Date to set all pages we commit to
 GitHubCode.GitHubConfigClass_defaultuser=Default user
 GitHubCode.GitHubConfigClass_defaultuser_tooltip=User to set all pages we commit to
-
-
-</content></xwikidoc>
+GitHubCode.GitHubConfigClass_status=Commit Status
+GitHubCode.GitHubAuthClass_username=GitHub User
+GitHubCode.GitHubAuthClass_password=GitHub Password</content></xwikidoc>

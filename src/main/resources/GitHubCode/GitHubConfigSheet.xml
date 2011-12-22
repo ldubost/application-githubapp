@@ -63,8 +63,29 @@
 
 #if(!$request.action)
 #set($class = $doc.getObject('GitHubCode.GitHubConfigClass').xWikiClass)
-
+#set($authobj = $doc.getObject("GitHubCode.GitHubAuthClass", "contextuser", $context.user))
+#if(!$authobj)
+ #set($authobj = $doc.newObject("GitHubCode.GitHubAuthClass"))
+ #if($context.action=="inline")
+  #set($ok = $doc.use($authobj))
+  #set($ok = $doc.set("contextuser", $context.user))
+  #set($ok = $doc.use("GitHubCode.GitHubConfigClass")) 
+  #set($ok = $doc.save())
+ #end
+#end
 #foreach($prop in $class.properties)
+ #if($prop.name=="username")
+  #set($ok = $doc.use($authobj))
+  **$doc.displayPrettyName("username")**
+  $doc.display("username")
+  #if($context.action=="inline")
+   **$doc.displayPrettyName("password")**
+   $doc.display("password")
+   #set($ok = $doc.set("contextuser", $context.user))
+   $doc.display("contextuser", "hidden")
+  #end
+  #set($ok = $doc.use("GitHubCode.GitHubConfigClass"))
+ #elseif($prop.name!="username"&amp;&amp;$prop.name!="password")
  #set($tooltip = $prop.propertyClass.getTooltip($context.context))
   **$doc.displayPrettyName($prop.name)** #if($tooltip!="GitHubCode.GitHubConfigClass_${prop.name}_tooltip")//(${tooltip})//#end
 
@@ -88,18 +109,17 @@ function tsuggest(field) {
 #else
    $doc.display($prop.getName())
 #end
-
 #end
 #end
+#end
+#set($configLoaded = "")
 #if($request.action)
 #set($githubgroovy = $xwiki.parseGroovyFromPage("GitHubCode.GitHubGroovy","GitHubCode.GitHubGroovy"))
 #set($ok = $githubgroovy.setXWiki($xwiki, $context))
-
 #if(!$githubgroovy.hasProgrammingRights())
 #warning("This application cannot work without programming rights on [[GitHubCode.GitHubGroovy]]. Resave this page as an admin and retry.")
 #end
-
-#set($ok = $githubgroovy.setGitHubConfig($doc.fullName))
+#set($configLoaded = $githubgroovy.setGitHubConfig($doc.fullName))
 #if($request.spaces)
  #set($spaces = $request.spaces)
  #set($savedlist = "")
@@ -108,6 +128,10 @@ function tsuggest(field) {
  #set($spaces = $githubgroovy.getDefaultSpace())
 #end
 #end
+#if($configLoaded!="")
+## it was not possible to connect to github
+$configLoaded
+#else
 ## CUSTOM action
 #if($request.action=="custom")
 {{html wiki=true clean=false}}
@@ -206,7 +230,7 @@ $msg.get("github.configsheet.commitmessage"):
 &lt;textarea name="message" rows="5" cols="80"&gt;
 &lt;/textarea&gt;
 &lt;br /&gt;
-&lt;input type="checkbox" name="pom" value="1" /&gt; $msg.get("github.configsheet.commitpom"):
+&lt;input type="checkbox" name="pom" value="1" /&gt; $msg.get("github.configsheet.commitpom")
 &lt;br /&gt;
 &lt;input type="submit" value="Commit" /&gt;
 &lt;/form&gt;
@@ -231,6 +255,8 @@ $githubgroovy.showXMLDiff($pagedoc, $request.githubsha)
 
 [[$msg.get("github.configsheet.listpages")&gt;&gt;${doc.fullName}?action=list]] - [[$msg.get("github.configsheet.customlist")&gt;&gt;${doc.fullName}?action=custom]]
 #end
+
+#end ## end set config failed
 
 #if($request.action)
 $msg.get("github.configsheet.debug"):
