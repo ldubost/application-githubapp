@@ -178,7 +178,7 @@ $msg.get("github.configsheet.committingpages"):
 #set($ok = $pagelist.add($page))
 #end
 
-$githubgroovy.commitFiles($pagelist, $request.message)
+$githubgroovy.commitFiles($pagelist, $request.message, $!request.pom)
 
 $msg.get("github.configsheet.committsuccessfull")
 
@@ -205,6 +205,8 @@ $msg.get("github.configsheet.commitmessage"):
 &lt;br /&gt;
 &lt;textarea name="message" rows="5" cols="80"&gt;
 &lt;/textarea&gt;
+&lt;br /&gt;
+&lt;input type="checkbox" name="pom" value="1" /&gt; $msg.get("github.configsheet.commitpom"):
 &lt;br /&gt;
 &lt;input type="submit" value="Commit" /&gt;
 &lt;/form&gt;

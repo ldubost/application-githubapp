@@ -31,11 +31,15 @@ import java.util.Collection;
 import java.util.Iterator;
 import org.apache.commons.lang.StringUtils;
 import com.xpn.xwiki.doc.XWikiDocument;
+import org.apache.velocity.tools.generic.EscapeTool;
 
 public class GitHubGroovy {
     def xwiki;
     def context;
     def githubclient;
+    def prjname = "";
+    def prjdesc = "";
+    def prjversion = "";
     def repuser = "";
     def repname = "";
     def reppath = "";
@@ -61,6 +65,9 @@ public class GitHubGroovy {
 
     public setGitHubConfig(page) {
        this.configdoc = xwiki.getDocument(page)
+       this.prjname = configdoc.getValue("name");
+       this.prjdesc = configdoc.getValue("description");
+       this.prjversion = configdoc.getValue("version");
        this.username = configdoc.getValue("username")
        this.password = configdoc.getObject("GitHubCode.GitHubConfigClass").getProperty("password").property.value
        this.repuser = configdoc.getValue("repository_user");
@@ -161,22 +168,18 @@ public class GitHubGroovy {
         return "";
    } 
 
-   /*
-    public byte[] getFileContent(String space, String page, String language) {
-        // get page
-        def filePath = space + "/" + page;
-        if (language!=null&amp;&amp;language!="")
-          filePath += "." + language;
-        filePath += ".xml"
+   public getPOMFile() {
+      def escapetool = new EscapeTool();
+      def samplePOM = xwiki.getDocument("GitHubCode.SamplePOM").getContent();
+      samplePOM = samplePOM.replaceAll("PRJNAME", prjname.toLowerCase().replaceAll(" ", "-"))
+      samplePOM = samplePOM.replaceAll("PRJPNAME", prjname)
+      samplePOM = samplePOM.replaceAll("PRJDESC", escapetool.xml(prjdesc))
+      samplePOM = samplePOM.replaceAll("PRJVERSION", prjversion)
+      debug("POM: ${samplePOM}");
+      return samplePOM;
+   }
 
-        def dservice = new DataService(githubclient);
-        def blob = dservice.getBlob(repository, treeEntry.sha);
-        def githubcontent = new String(Base64.decodeBase64(blob.content.getBytes()));
-        return githubcontent.getBytes();
-    }
-    */
-
-    public getXML(pagedoc) {
+   public getXML(pagedoc) {
         def clonedDoc = pagedoc.document.clone();
 
         // remove Tag object
@@ -210,7 +213,9 @@ public class GitHubGroovy {
         return c.trim().replaceAll("[\r]","");
     }
 
-    public commitFiles(pagelist, message) {
+
+
+    public commitFiles(pagelist, message, pom) {
         def newSpaces = new ArrayList();
         def newPages = new ArrayList();
 
@@ -234,13 +239,7 @@ public class GitHubGroovy {
            }
            def space = pagedoc.getSpace();
            def page = pagedoc.getName();
-           def language = pagedoc.getLanguage();
-           if (!newSpaces.contains(space)) {
-             //  if (pathexists) {
-             //   newSpaces.add(space);   
-             //   debug("Adding to new spaces: ${space}")         
-             //  }
-           }      
+           def language = pagedoc.getLanguage();     
            
            // get page
            def filePath = space + "/" + page;
@@ -248,16 +247,6 @@ public class GitHubGroovy {
                 filePath += "." + language;
            filePath += ".xml"
 
-           /*
-           if (fileexits) {
-                newPages.add(filePath);                 
-                debug("Adding to new pages: ${filePath}")         
-           } else {
-                debug("Adding to updated pages: ${filePath}")         
-                currentPageData.put(filePath, getFileContent(space, page, language))
-           }
-           */
-           
            def pageList = pagesBySpace.get(space);
            if (pageList==null) {
               pageList = new ArrayList();
@@ -291,7 +280,6 @@ public class GitHubGroovy {
 
               def newXML = getXML(pagedoc);
               def newData = newXML.getBytes();
-              debug("Rep id: " + dservice.getId(repository));
 
               Blob blob = new Blob();
               blob.setContent(newXML);
@@ -327,8 +315,25 @@ public class GitHubGroovy {
             e.printStackTrace();
             debug("error preparing commit on page ${pagename2}: " + e.getMessage());
             return null;
-
         } finally {          
+        }
+
+        // Adding pom in commit
+        if (pom=="1") {
+            def pomFile = getPOMFile();
+            Blob blob = new Blob();
+            blob.setContent(pomFile);
+            blob.setEncoding("utf-8");
+            debug("Repository: " + repository);
+            def blobSha = dservice.createBlob(repository, blob);
+            debug("Create blob: " + blobSha);
+            TreeEntry blobTreeEntry = new TreeEntry();
+            blobTreeEntry.setPath("pom.xml");
+            blobTreeEntry.setType("blob");
+            blobTreeEntry.setMode("100644");
+            blobTreeEntry.setSha(blobSha);
+            treeEntries.add(blobTreeEntry);
+            debug("Added pom.xml to commit");
         }
 
         // now real commit
@@ -349,14 +354,9 @@ public class GitHubGroovy {
         ref.setObject(object);
         dservice.editReference(repository, ref, false);
 
-        // get the commit revision number and store it
-         // we need to save the status
-        def rev = ""
-         for (def pagepath in committedPages) {
-           status.get(pagepath).githubversion = "${rev}";
-         }
-         saveStatus();
-         return commitInfo;
+        // we need to save the status
+        saveStatus();
+        return "https://github.com/${repuser}/${repname}/commit/${newCommit.sha}";
     }
 
     public getChangedPages(String spaces) {
@@ -458,8 +458,6 @@ public class GitHubGroovy {
            }
         }
  
-        debug("ChangedMap: " + changedMap);
-
         if (spaceList!=null) {
          for (filePath in githubEntries.keySet()) {
              def entry = githubEntries.get(filePath);

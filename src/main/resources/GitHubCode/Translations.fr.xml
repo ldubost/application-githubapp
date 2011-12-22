@@ -32,6 +32,7 @@ github.configsheet.title=Configuration GitHub
 github.configsheet.compare.title=Differences pour
 github.configsheet.debug=Debug
 github.configsheet.commitmessage=Message du commit
+github.configsheet.commitpom=Commiter un fichier POM Maven
 github.configsheet.listpages=Liste des pages à committer
 github.configsheet.commitall=Commiter
 github.configsheet.updateall=Mettre à jour

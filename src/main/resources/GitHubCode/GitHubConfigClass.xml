@@ -37,7 +37,7 @@
 <disabled>0</disabled>
 <emptyIsToday>0</emptyIsToday>
 <name>defaultdate</name>
-<number>8</number>
+<number>11</number>
 <picker>1</picker>
 <prettyName>defaultdate</prettyName>
 <size>20</size>
@@ -50,7 +50,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>defaultspace</name>
-<number>6</number>
+<number>9</number>
 <picker>0</picker>
 <prettyName>defaultspace</prettyName>
 <size>30</size>
@@ -63,7 +63,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>defaultuser</name>
-<number>9</number>
+<number>12</number>
 <picker>0</picker>
 <prettyName>defaultuser</prettyName>
 <size>30</size>
@@ -72,12 +72,40 @@
 <validationRegExp></validationRegExp>
 <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
 </defaultuser>
+<description>
+<customDisplay></customDisplay>
+<disabled>0</disabled>
+<editor>Text</editor>
+<name>description</name>
+<number>3</number>
+<picker>0</picker>
+<prettyName>description</prettyName>
+<rows>5</rows>
+<size>40</size>
+<unmodifiable>0</unmodifiable>
+<validationMessage></validationMessage>
+<validationRegExp></validationRegExp>
+<classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+</description>
+<name>
+<customDisplay></customDisplay>
+<disabled>0</disabled>
+<name>name</name>
+<number>1</number>
+<picker>0</picker>
+<prettyName>name</prettyName>
+<size>30</size>
+<unmodifiable>0</unmodifiable>
+<validationMessage></validationMessage>
+<validationRegExp></validationRegExp>
+<classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+</name>
 <password>
 <algorithm></algorithm>
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>password</name>
-<number>5</number>
+<number>8</number>
 <picker>0</picker>
 <prettyName>password</prettyName>
 <size>30</size>
@@ -91,7 +119,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>repository_name</name>
-<number>2</number>
+<number>5</number>
 <picker>0</picker>
 <prettyName>repository name</prettyName>
 <size>40</size>
@@ -104,7 +132,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>repository_path</name>
-<number>2</number>
+<number>6</number>
 <picker>0</picker>
 <prettyName>repository path</prettyName>
 <size>80</size>
@@ -117,7 +145,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>repository_user</name>
-<number>1</number>
+<number>4</number>
 <picker>0</picker>
 <prettyName>repository user</prettyName>
 <size>80</size>
@@ -135,7 +163,7 @@
 <idField>doc.fullName</idField>
 <multiSelect>0</multiSelect>
 <name>savedlist</name>
-<number>7</number>
+<number>10</number>
 <picker>0</picker>
 <prettyName>savedlist</prettyName>
 <relationalStorage>0</relationalStorage>
@@ -155,7 +183,7 @@
 <disabled>0</disabled>
 <editor>Text</editor>
 <name>status</name>
-<number>10</number>
+<number>13</number>
 <picker>0</picker>
 <prettyName>status</prettyName>
 <rows>5</rows>
@@ -169,7 +197,7 @@
 <customDisplay></customDisplay>
 <disabled>0</disabled>
 <name>username</name>
-<number>4</number>
+<number>7</number>
 <picker>0</picker>
 <prettyName>username</prettyName>
 <size>30</size>
@@ -178,5 +206,18 @@
 <validationRegExp></validationRegExp>
 <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
 </username>
+<version>
+<customDisplay></customDisplay>
+<disabled>0</disabled>
+<name>version</name>
+<number>2</number>
+<picker>0</picker>
+<prettyName>version</prettyName>
+<size>30</size>
+<unmodifiable>0</unmodifiable>
+<validationMessage></validationMessage>
+<validationRegExp></validationRegExp>
+<classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+</version>
 </class>
 <content>{{include document="XWiki.ClassSheet"/}}</content></xwikidoc>
